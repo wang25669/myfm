@@ -1,0 +1,25 @@
+# 敏感数据
+cookies.json
+netease_cookies.json
+
+# 缓存目录
+songs/
+myfm/__pycache__/
+__pycache__/
+*.pyc
+netease-music-pusher-1.0.0/
+
+# IDE & 系统文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Android 编译垃圾
+AndroidApp/.gradle/
+AndroidApp/local.properties
+AndroidApp/app/build/
+AndroidApp/captures/
+AndroidApp/*.iml
+AndroidApp/.externalNativeBuild/
+AndroidApp/.cxx/

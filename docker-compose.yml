@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  myfm:
+    # build: .
+    # image: myfm:latest
+    image: ghcr.io/wang25669/myfm:latest
+    container_name: myfm
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      # 映射 cookie 保持登录状态
+      - ./cookies.json:/app/myfm/cookies.json
+      # 映射下载的歌曲目录，永久保存离线曲库
+      - ./songs:/app/myfm/songs

@@ -1,0 +1,53 @@
+name: Build and Release Android APK
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'AndroidApp/**'
+    # 也可以设置只有打标签时才发布 Release，但为了方便你使用，我们设置为 push 即触发
+    tags:
+      - 'v*' 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x AndroidApp/gradlew
+
+      - name: Build with Gradle
+        run: cd AndroidApp && ./gradlew assembleDebug
+
+      - name: Rename APK
+        run: mv AndroidApp/app/build/outputs/apk/debug/app-debug.apk AndroidApp/app/build/outputs/apk/debug/MyFM-debug.apk
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: build-${{ steps.date.outputs.date }}
+          name: Auto Build ${{ steps.date.outputs.date }}
+          draft: false
+          prerelease: false
+          files: |
+            AndroidApp/app/build/outputs/apk/debug/MyFM-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
