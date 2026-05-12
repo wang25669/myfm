@@ -27,10 +27,10 @@ jobs:
           cache: gradle
 
       - name: Grant execute permission for gradlew
-        run: chmod +x AndroidApp/gradlew
+        run: chmod +x AndroidApp/gradle
 
       - name: Build with Gradle
-        run: cd AndroidApp && ./gradlew assembleDebug
+        run: cd AndroidApp && ./gradle assembleDebug
 
       - name: Rename APK
         run: mv AndroidApp/app/build/outputs/apk/debug/app-debug.apk AndroidApp/app/build/outputs/apk/debug/MyFM-debug.apk
