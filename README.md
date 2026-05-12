@@ -61,7 +61,7 @@ docker-compose up -d --build
 
 ### 第二步：安装并配置车机 App
 
-1.  **自动编译 (推荐)**：每当你推送代码，GitHub Actions 会自动编译并在你的 GitHub Repo 的 **Releases** 页面生成最新的 `app-debug.apk/myfm.apk`。
+1.  **自动编译 (推荐)**：每当你推送代码，GitHub Actions 会自动编译并在你的 GitHub Repo 的 **Releases** 页面生成最新的 `app-debug.apk/MyFM-debug.apk`。
 2.  **手动编译**：你也可以使用 Android Studio 打开 `AndroidApp` 文件夹自行打包。新的包名为 `com.wangl.myfm`。
 3.  将 APK 安装到车机。
 4.  初次启动，输入服务端地址（如 `http://192.168.x.x:5000`）。
