@@ -1,4 +1,4 @@
-package com.netease.personalfm;
+package com.wangl.myfm;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -77,7 +77,7 @@ public class MainActivity extends Activity {
         startService(new Intent(this, PlayerService.class));
         
         // 注册接收器
-        registerReceiver(mediaCommandReceiver, new IntentFilter("com.netease.personalfm.MEDIA_COMMAND"));
+        registerReceiver(mediaCommandReceiver, new IntentFilter("com.wangl.myfm.MEDIA_COMMAND"));
 
         // 第一步：检查 URL 配置
         checkAndShowUrlDialog();

@@ -1,4 +1,4 @@
-package com.netease.personalfm;
+package com.wangl.myfm;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -26,7 +26,7 @@ public class MediaButtonReceiver extends BroadcastReceiver {
                         break;
                 }
                 if (cmd != null) {
-                    Intent localIntent = new Intent("com.netease.personalfm.MEDIA_COMMAND");
+                    Intent localIntent = new Intent("com.wangl.myfm.MEDIA_COMMAND");
                     localIntent.putExtra("command", cmd);
                     context.sendBroadcast(localIntent);
                 }

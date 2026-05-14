@@ -19,6 +19,7 @@ Thumbs.db
 AndroidApp/.gradle/
 AndroidApp/local.properties
 AndroidApp/app/build/
+AndroidApp/build/
 AndroidApp/captures/
 AndroidApp/*.iml
 AndroidApp/.externalNativeBuild/

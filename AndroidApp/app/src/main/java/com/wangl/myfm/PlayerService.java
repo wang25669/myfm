@@ -1,4 +1,4 @@
-package com.netease.personalfm;
+package com.wangl.myfm;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -36,7 +36,7 @@ public class PlayerService extends Service {
             @Override
             public void onCompletion(MediaPlayer mp) {
                 // 播完一首后，伪装成按了“下一首”按键，通知 MainActivity 切歌
-                sendBroadcast(new Intent("com.netease.personalfm.MEDIA_COMMAND").putExtra("command", "next"));
+                sendBroadcast(new Intent("com.wangl.myfm.MEDIA_COMMAND").putExtra("command", "next"));
             }
         });
         mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
