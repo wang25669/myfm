@@ -77,4 +77,4 @@ A：请确保您的安卓端 `app.js` 已经更新到最新。如果旧版缓存
 A：请检查 `AndroidManifest.xml` 中 `MainActivity` 是否配置了 `android:launchMode="singleTask"` 属性。
 
 ## 📄 License
-MIT License
+GPL License
