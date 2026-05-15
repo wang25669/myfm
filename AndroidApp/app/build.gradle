@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.wangl.myfm"
-        minSdk 17
+        minSdk 14
         targetSdk 33
         versionCode 1
         versionName "1.0"

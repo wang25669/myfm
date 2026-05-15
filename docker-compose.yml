@@ -2,9 +2,10 @@ version: '3.8'
 
 services:
   myfm:
-    build: .
-    image: myfm:latest
-    #image: ghcr.io/wang25669/myfm:latest
+    # 本地构建
+    #build: .
+    #image: myfm:latest
+    image: ghcr.io/wang25669/myfm:latest
     container_name: myfm
     restart: always
     ports:
