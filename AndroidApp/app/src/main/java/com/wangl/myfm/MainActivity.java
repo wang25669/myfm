@@ -121,6 +121,14 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // 处理 singleTask 模式下的新 Intent
+        // 不重新加载 URL，保持 WebView 当前状态（继续播放）
+        setIntent(intent);
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(mediaCommandReceiver);
