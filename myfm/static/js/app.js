@@ -187,7 +187,7 @@ dom.loginBtn.onclick = function() {
         if (res.code === 200) {
             showMessage('登录成功！', false);
             state.isLoggedIn = true;
-            state.currentMode = 'daily';
+            state.currentMode = 'fm';
             updateNavUI();
             setTimeout(function() {
                 loadSongs(true);
@@ -206,13 +206,18 @@ function checkStatus() {
     ajax('GET', '/api/status', null, function(res) {
         if (res.code === 200) {
             state.isLoggedIn = true;
-            state.currentMode = 'daily';
+            state.currentMode = 'fm';
             loadSongs(true);
         } else {
             state.isLoggedIn = false;
             state.currentMode = 'hot';
             loadSongs(false);
         }
+        updateNavUI();
+    }, function() {
+        state.isLoggedIn = false;
+        state.currentMode = 'hot';
+        loadSongs(false);
         updateNavUI();
     });
 }
