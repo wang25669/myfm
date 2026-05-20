@@ -75,7 +75,7 @@ class NeteaseMusicClient:
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.0',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0',
             'Referer': 'https://music.163.com/',
             'Origin': 'https://music.163.com',
             'Accept': '*/*',
@@ -84,6 +84,17 @@ class NeteaseMusicClient:
         })
         self.crypto = NeteaseCrypto()
         self.cookies_file = './cookies.json'
+        
+        # 注入风控设备信息 Cookie，配合 weapi 认证登录状态
+        device_cookies = {
+            'os': 'pc',
+            'appver': '3.1.17.204416',
+            'osver': 'Microsoft-Windows-10-Professional-build-19045-64bit',
+            'channel': 'netease',
+            '__remember_me': 'true',
+            'ntes_kaola_ad': '1'
+        }
+        self.session.cookies.update(device_cookies)
         
     def weapi_request(self, endpoint, params=None):
         """调用weapi接口"""
@@ -218,6 +229,16 @@ class NeteaseMusicClient:
             with open(self.cookies_file, 'r') as f:
                 cookies = json.load(f)
                 self.session.cookies.update(cookies)
+                # 重新应用设备风控 Cookie，确保 weapi 正常鉴权
+                device_cookies = {
+                    'os': 'pc',
+                    'appver': '3.1.17.204416',
+                    'osver': 'Microsoft-Windows-10-Professional-build-19045-64bit',
+                    'channel': 'netease',
+                    '__remember_me': 'true',
+                    'ntes_kaola_ad': '1'
+                }
+                self.session.cookies.update(device_cookies)
                 return True
         except (FileNotFoundError, json.JSONDecodeError):
             return False
