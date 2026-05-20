@@ -108,8 +108,10 @@ class NeteaseMusicClient:
         """发送验证码"""
         result = self.weapi_request('/sms/captcha/sent', {
             'cellphone': phone,
-            'ctcode': '86'
+            'ctcode': '86',
+            'secrete': 'music_middleuser_pclogin'
         })
+
         
         if result.get('code') == 200:
             print(f"✅ 验证码已发送到 {phone}")
@@ -122,12 +124,15 @@ class NeteaseMusicClient:
     
     def login_with_captcha(self, phone, captcha):
         """使用验证码登录"""
-        result = self.weapi_request('/login/cellphone', {
+        result = self.weapi_request('/w/login/cellphone', {
             'phone': phone,
             'captcha': captcha,
             'countrycode': '86',
-            'rememberLogin': 'true'
+            'remember': 'true',
+            'type': '1',
+            'https': 'true'
         })
+
         
         if result.get('code') == 200:
             profile = result.get('profile', {})
@@ -142,11 +147,10 @@ class NeteaseMusicClient:
     
     def get_daily_recommend(self):
         """获取每日推荐歌曲"""
-        result = self.weapi_request('/v1/discovery/recommend/songs', {
-            'offset': 0,
-            'total': True,
-            'limit': 20
+        result = self.weapi_request('/v3/discovery/recommend/songs', {
+            'afresh': 'false'
         })
+
         
         if result.get('code') == 200:
             data = result.get('data', {})
