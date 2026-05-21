@@ -80,7 +80,11 @@ def process_song_list(songs):
                 'br': 999000
             })
             if url_result.get('code') == 200:
-                valid_song_ids = {item.get('id') for item in url_result.get('data', []) if item.get('url')}
+                valid_song_ids = {
+                    item.get('id')
+                    for item in url_result.get('data', [])
+                    if is_full_playable_item(item)
+                }
         except Exception as e:
             print("批量检查URL异常:", e)
             
@@ -118,6 +122,14 @@ def sanitize_filename(name):
     # 替换掉 Windows/Linux 不能作为文件名的特殊字符
     return re.sub(r'[\\/*?:"<>|]', '_', name)
 
+def is_full_playable_item(item):
+    return (
+        bool(item)
+        and bool(item.get('url'))
+        and item.get('code') == 200
+        and item.get('freeTrialInfo') is None
+    )
+
 @app.route('/api/song_url', methods=['GET'])
 def get_song_url():
     song_id = request.args.get('id')
@@ -147,10 +159,6 @@ def get_song_url():
     # URL 编码文件名，避免特殊字符在 URL 传递中出问题
     encoded_filename = urllib.parse.quote(filename)
     
-    if os.path.exists(local_path):
-        print(f"[DEBUG] 命中本地缓存: {local_path}", flush=True)
-        return jsonify({'code': 200, 'data': {'url': f'/api/play/{encoded_filename}'}})
-        
     # 2. 如果没有缓存，去网易云获取真实URL
     try:
         result = client.weapi_request('/song/enhance/player/url', {
@@ -166,7 +174,11 @@ def get_song_url():
         if result.get('code') == 200:
             data = result.get('data', [])
             if data:
-                url = data[0].get('url')
+                item = data[0]
+                if is_full_playable_item(item):
+                    url = item.get('url')
+                elif item.get('freeTrialInfo') is not None:
+                    print(f"[DEBUG] 歌曲 {song_id} 仅返回试听片段，已过滤", flush=True)
     except Exception as e:
         print(f"\n[DEBUG] ==== 获取歌曲 ID: {song_id} 发生异常 ====", flush=True)
         print(f"[DEBUG] 异常信息: {str(e)}", flush=True)
@@ -174,6 +186,10 @@ def get_song_url():
         url = client.get_song_url(song_id)
 
     if url:
+        if os.path.exists(local_path):
+            print(f"[DEBUG] 命中本地缓存: {local_path}", flush=True)
+            return jsonify({'code': 200, 'data': {'url': f'/api/play/{encoded_filename}'}})
+
         # 3. 将真实URL下载到本地 songs 文件夹
         try:
             print(f"[DEBUG] 正在下载歌曲 {song_id} 到 NAS...", flush=True)
@@ -221,7 +237,11 @@ def get_personal_fm():
                         'br': 999000
                     })
                     if url_result.get('code') == 200:
-                        valid_song_ids = {item.get('id') for item in url_result.get('data', []) if item.get('url')}
+                        valid_song_ids = {
+                            item.get('id')
+                            for item in url_result.get('data', [])
+                            if is_full_playable_item(item)
+                        }
                 except Exception:
                     pass
             
