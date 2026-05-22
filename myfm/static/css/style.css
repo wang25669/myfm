@@ -223,6 +223,17 @@ body {
     box-shadow: 0 8px 30px rgba(0,0,0,0.8);
     z-index: 100;
     padding: 0 15px;
+    /* 确保老旧内核下尺寸计算正确 */
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+/* 经典清除浮动，防止父级塌陷 */
+.player-bar:after,
+.player-info:after {
+    content: "";
+    display: table;
+    clear: both;
 }
 
 .player-info {
@@ -230,6 +241,8 @@ body {
     width: 60%;
     height: 100%;
     padding: 12px 0;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 .cover {
@@ -259,15 +272,21 @@ body {
     border: 2px solid #ff2d55;
 }
 
+/* 核心修改：利用 BFC 自动填满右侧剩余空间 */
 .track-info {
-    float: left;
-    width: 70%; /* 放弃 calc，改用稳健的百分比 */
+    /* 放弃 float 和 width */
+    float: none;
+    width: auto;
+    /* 开启 BFC，使其紧贴在 float:left 的封面右侧，且绝不换行 */
+    overflow: hidden; 
+    height: 46px;
 }
 
 .track-name {
     font-size: 15px;
     font-weight: bold;
     color: #fff;
+    margin-top: 2px; /* 微调：使其与 46px 的封面更好地垂直居中 */
     margin-bottom: 3px;
     white-space: nowrap;
     overflow: hidden;
@@ -277,8 +296,12 @@ body {
 .track-artist {
     font-size: 12px;
     color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 歌手名过长时也应当支持省略号，防止撑破布局 */
 }
 
+/* 右侧控制按钮（display: table 方案在旧设备表现极佳，保留） */
 .player-controls {
     float: right;
     width: 40%;
@@ -303,10 +326,13 @@ body {
     font-size: 12px;
     line-height: 34px;
     text-align: center;
-    margin-left: 8px;
+    margin-left: 4px;
     cursor: pointer;
     outline: none;
     -webkit-appearance: none;
+    /* 解决老旧设备缩放动画抖动/模糊的黑科技 */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
 }
 
 .control-btn.play-btn {
