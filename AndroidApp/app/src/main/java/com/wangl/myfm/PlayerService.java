@@ -96,7 +96,8 @@ public class PlayerService extends Service {
                         mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                             @Override
                             public void onPrepared(MediaPlayer mp) {
-                                android.widget.Toast.makeText(PlayerService.this, "✅ 底层缓冲完毕，准备开搞", android.widget.Toast.LENGTH_SHORT).show();
+                                // 调试用：显示缓冲完成提示
+                                // android.widget.Toast.makeText(PlayerService.this, "✅ 底层缓冲完毕，准备开搞", android.widget.Toast.LENGTH_SHORT).show();
                                 mp.start();
                             }
                         });
