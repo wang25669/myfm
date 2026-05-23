@@ -15,9 +15,11 @@
             <button id="fmBtn" class="btn btn-nav">私人FM</button>
             <button id="hotBtn" class="btn btn-nav">热歌榜</button>
             <button id="toggleLoginBtn" class="btn btn-nav">登录</button>
+            <button id="updateEndpointsBtn" class="btn btn-nav update-nav">更新接口</button>
             <button id="refreshBtn" class="btn btn-nav refresh-nav">刷新</button>
         </div>
-        <div id="loginMessage" class="message"></div>
+        <div id="systemMessage" class="system-message"></div>
+
         <!-- 登录面板 -->
         <div id="loginPanel" class="panel">
             <div class="login-box">
@@ -29,7 +31,7 @@
                     <button id="sendCaptchaBtn" class="btn btn-secondary">获取验证码</button>
                 </div>
                 <button id="loginBtn" class="btn btn-primary">登 录</button>
-               
+                <div id="loginMessage" class="message"></div>
             </div>
         </div>
 
@@ -67,6 +69,6 @@
     </div>
     
     <!-- 为了兼容老式浏览器，我们将所有的 JS 写成 ES5 标准 -->
-    <script src="js/app.js?v=1.2"></script>
+    <script src="js/app.js?v=1.3"></script>
 </body>
 </html>

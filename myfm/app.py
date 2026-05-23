@@ -75,10 +75,7 @@ def process_song_list(songs):
     
     if song_ids:
         try:
-            url_result = client.weapi_request('/song/enhance/player/url', {
-                'ids': song_ids,
-                'br': 999000
-            })
+            url_result = client.get_song_url_items(song_ids)
             if url_result.get('code') == 200:
                 valid_song_ids = {
                     item.get('id')
@@ -135,6 +132,7 @@ def get_song_url():
     song_id = request.args.get('id')
     name = request.args.get('name', '未知歌曲')
     artist = request.args.get('artist', '未知歌手')
+    playback_mode = request.args.get('mode', 'proxy')
     
     if not song_id:
         return jsonify({'code': 400, 'msg': '缺少歌曲ID'})
@@ -161,10 +159,7 @@ def get_song_url():
     
     # 2. 如果没有缓存，去网易云获取真实URL
     try:
-        result = client.weapi_request('/song/enhance/player/url', {
-            'ids': [song_id],
-            'br': 999000
-        })
+        result = client.get_song_url_items([song_id])
         
         print(f"\n[DEBUG] ==== 请求歌曲 ID: {song_id} ====", flush=True)
         print(f"[DEBUG] 网易云 API 原始返回: {result}", flush=True)
@@ -186,9 +181,34 @@ def get_song_url():
         url = client.get_song_url(song_id)
 
     if url:
+        url_scheme = 'https'
+        if isinstance(url, str) and url.startswith('http://'):
+            url_scheme = 'http'
+
+        if playback_mode == 'direct':
+            return jsonify({'code': 200, 'data': {
+                'url': url,
+                'source': 'direct',
+                'url_scheme': url_scheme,
+                'fallback_available': True
+            }})
+
+        if playback_mode == 'auto' and isinstance(url, str) and url.startswith('http://'):
+            return jsonify({'code': 200, 'data': {
+                'url': url,
+                'source': 'direct',
+                'url_scheme': 'http',
+                'fallback_available': True
+            }})
+
         if os.path.exists(local_path):
             print(f"[DEBUG] 命中本地缓存: {local_path}", flush=True)
-            return jsonify({'code': 200, 'data': {'url': f'/api/play/{encoded_filename}'}})
+            return jsonify({'code': 200, 'data': {
+                'url': f'/api/play/{encoded_filename}',
+                'source': 'proxy',
+                'url_scheme': 'http',
+                'fallback_available': False
+            }})
 
         # 3. 将真实URL下载到本地 songs 文件夹
         try:
@@ -201,7 +221,12 @@ def get_song_url():
             print(f"[DEBUG] 歌曲 {filename} 下载完成！", flush=True)
             
             # 返回相对于 NAS 的直链
-            return jsonify({'code': 200, 'data': {'url': f'/api/play/{encoded_filename}'}})
+            return jsonify({'code': 200, 'data': {
+                'url': f'/api/play/{encoded_filename}',
+                'source': 'proxy',
+                'url_scheme': 'http',
+                'fallback_available': False
+            }})
         except Exception as e:
             print(f"[DEBUG] 下载失败: {str(e)}", flush=True)
             return jsonify({'code': 500, 'msg': f'下载音频失败: {str(e)}'})
@@ -223,7 +248,7 @@ def get_personal_fm():
         
     try:
         # 网易云私人FM接口
-        result = client.weapi_request('/v1/radio/get')
+        result = client.endpoint_request('personal_fm')
         if result.get('code') == 200:
             songs = result.get('data', [])
             
@@ -232,10 +257,7 @@ def get_personal_fm():
             valid_song_ids = set(song_ids)
             if song_ids:
                 try:
-                    url_result = client.weapi_request('/song/enhance/player/url', {
-                        'ids': song_ids,
-                        'br': 999000
-                    })
+                    url_result = client.get_song_url_items(song_ids)
                     if url_result.get('code') == 200:
                         valid_song_ids = {
                             item.get('id')
@@ -267,10 +289,20 @@ def get_personal_fm():
 
 @app.route('/api/status', methods=['GET'])
 def check_status():
+    endpoint_status = client.endpoint_status()
     if client.load_cookies():
-        return jsonify({'code': 200, 'msg': '已登录'})
-    return jsonify({'code': 401, 'msg': '未登录'})
+        return jsonify({'code': 200, 'msg': '已登录', 'endpoint_config': endpoint_status})
+    return jsonify({'code': 401, 'msg': '未登录', 'endpoint_config': endpoint_status})
+
+@app.route('/api/admin/update_endpoints', methods=['POST'])
+def update_endpoints():
+    success, message = client.refresh_endpoint_config()
+    status = client.endpoint_status()
+    if success:
+        return jsonify({'code': 200, 'msg': message, 'endpoint_config': status})
+    return jsonify({'code': 500, 'msg': message, 'endpoint_config': status})
 
 if __name__ == '__main__':
+    client.start_endpoint_auto_update()
     # 监听 0.0.0.0 以便局域网/DDNS访问
     app.run(host='0.0.0.0', port=5000, debug=True)

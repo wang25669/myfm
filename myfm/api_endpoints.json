@@ -1,0 +1,69 @@
+{
+  "endpoints": {
+    "captcha_sent": {
+      "defaults": {
+        "ctcode": "86",
+        "secrete": "music_middleuser_pclogin"
+      },
+      "endpoint": "/sms/captcha/sent",
+      "type": "weapi"
+    },
+    "daily_recommend": {
+      "defaults": {
+        "afresh": "false"
+      },
+      "endpoint": "/v3/discovery/recommend/songs",
+      "type": "weapi"
+    },
+    "hot_playlist_legacy": {
+      "defaults": {},
+      "type": "raw_get",
+      "url": "https://music.163.com/api/playlist/detail?id=3778678"
+    },
+    "login_cellphone": {
+      "defaults": {
+        "countrycode": "86",
+        "https": "true",
+        "remember": "true",
+        "type": "1"
+      },
+      "endpoint": "/w/login/cellphone",
+      "type": "weapi"
+    },
+    "personal_fm": {
+      "defaults": {},
+      "endpoint": "/v1/radio/get",
+      "type": "weapi"
+    },
+    "playlist_detail_v6": {
+      "defaults": {
+        "n": 100000,
+        "s": 8
+      },
+      "endpoint": "/v6/playlist/detail",
+      "type": "weapi"
+    },
+    "song_detail": {
+      "defaults": {},
+      "endpoint": "/v3/song/detail",
+      "type": "weapi"
+    },
+    "song_url_legacy": {
+      "defaults": {
+        "br": 999000
+      },
+      "endpoint": "/song/enhance/player/url",
+      "type": "weapi"
+    },
+    "song_url_v1": {
+      "defaults": {
+        "encodeType": "flac",
+        "level": "exhigh"
+      },
+      "endpoint": "/song/enhance/player/url/v1",
+      "type": "weapi"
+    }
+  },
+  "updated_at": "builtin",
+  "version": 1
+}

@@ -28,6 +28,28 @@ docker-compose up -d
 > cookies.json（保存您的登录状态）
 > songs 文件夹（保存您听过的所有高音质音乐，生成私人乐库）
 
+### 接口自动更新
+
+MyFM 服务端会在 Docker 容器启动后自动检查一次接口配置，之后默认每 24 小时检查一次。检查失败不会影响播放，服务会继续使用最后一次成功的配置或内置默认配置。
+
+如果发现歌曲列表正常但播放链接突然大量失败，可以在页面顶部点击 **更新接口**，它会调用 `POST /api/admin/update_endpoints` 立即刷新接口配置。这个操作只更新服务端配置，不需要重新生成 APK。
+
+可选环境变量：
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `MYFM_ENDPOINT_UPDATE_URL` | `https://raw.githubusercontent.com/wang25669/myfm/main/myfm/api_endpoints.json` | 接口配置更新源，只允许白名单 HTTPS 来源 |
+| `MYFM_ENDPOINT_UPDATE_INTERVAL_HOURS` | `24` | 自动检查间隔，单位小时 |
+| `MYFM_DISABLE_ENDPOINT_AUTO_UPDATE` | 未设置 | 设为 `1` 时关闭后台自动更新，只保留页面手动更新 |
+
+示例：
+
+```yaml
+environment:
+  - MYFM_ENDPOINT_UPDATE_INTERVAL_HOURS=12
+  - MYFM_DISABLE_ENDPOINT_AUTO_UPDATE=0
+```
+
 ### 第二步：安装并配置车机 App
 
 1.  **自动编译 (推荐)**：下载**Releases** 页面最新生成的 `MyFM-debug.apk`。

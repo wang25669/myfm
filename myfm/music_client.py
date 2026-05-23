@@ -7,8 +7,12 @@ import requests
 import json
 import base64
 import os
+import threading
+import time
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+
+from endpoint_config import EndpointConfigManager
 
 class NeteaseCrypto:
     """网易云加密工具"""
@@ -84,6 +88,8 @@ class NeteaseMusicClient:
         })
         self.crypto = NeteaseCrypto()
         self.cookies_file = './cookies.json'
+        self.endpoint_config = EndpointConfigManager()
+        self._updater_started = False
         
         # 注入风控设备信息 Cookie，配合 weapi 认证登录状态
         device_cookies = {
@@ -114,13 +120,65 @@ class NeteaseMusicClient:
         except Exception as e:
             print(f"❌ 请求失败: {e}")
             return {'code': -1, 'msg': str(e)}
+
+    def endpoint_request(self, name, params=None):
+        """按命名接口读取配置并发起请求。"""
+        endpoint = self.endpoint_config.get(name)
+        params = params or {}
+        merged = dict(endpoint.get('defaults', {}))
+        merged.update(params)
+
+        request_type = endpoint.get('type')
+        if request_type == 'weapi':
+            return self.weapi_request(endpoint.get('endpoint'), merged)
+        if request_type == 'raw_get':
+            try:
+                response = self.session.get(endpoint.get('url'), timeout=10)
+                return response.json()
+            except Exception as e:
+                print(f"❌ 请求失败: {e}")
+                return {'code': -1, 'msg': str(e)}
+        return {'code': -1, 'msg': 'unsupported endpoint type'}
+
+    def refresh_endpoint_config(self):
+        """手动刷新接口配置。"""
+        return self.endpoint_config.refresh()
+
+    def endpoint_status(self):
+        return self.endpoint_config.status()
+
+    def start_endpoint_auto_update(self):
+        """启动后台接口配置刷新任务。"""
+        if os.environ.get('MYFM_DISABLE_ENDPOINT_AUTO_UPDATE') == '1':
+            return False
+        if self._updater_started:
+            return True
+        self._updater_started = True
+        interval = self.get_update_interval_seconds()
+
+        def worker():
+            self.refresh_endpoint_config()
+            while True:
+                time.sleep(interval)
+                self.refresh_endpoint_config()
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        return True
+
+    def get_update_interval_seconds(self):
+        try:
+            hours = float(os.environ.get('MYFM_ENDPOINT_UPDATE_INTERVAL_HOURS', '24'))
+            if hours <= 0:
+                hours = 24
+        except ValueError:
+            hours = 24
+        return int(hours * 3600)
     
     def send_captcha(self, phone):
         """发送验证码"""
-        result = self.weapi_request('/sms/captcha/sent', {
+        result = self.endpoint_request('captcha_sent', {
             'cellphone': phone,
-            'ctcode': '86',
-            'secrete': 'music_middleuser_pclogin'
         })
 
         
@@ -135,13 +193,9 @@ class NeteaseMusicClient:
     
     def login_with_captcha(self, phone, captcha):
         """使用验证码登录"""
-        result = self.weapi_request('/w/login/cellphone', {
+        result = self.endpoint_request('login_cellphone', {
             'phone': phone,
             'captcha': captcha,
-            'countrycode': '86',
-            'remember': 'true',
-            'type': '1',
-            'https': 'true'
         })
 
         
@@ -158,9 +212,7 @@ class NeteaseMusicClient:
     
     def get_daily_recommend(self):
         """获取每日推荐歌曲"""
-        result = self.weapi_request('/v3/discovery/recommend/songs', {
-            'afresh': 'false'
-        })
+        result = self.endpoint_request('daily_recommend')
 
         
         if result.get('code') == 200:
@@ -170,10 +222,19 @@ class NeteaseMusicClient:
 
     def get_hot_songs(self):
         """获取热歌榜歌曲 (无需登录)"""
-        url = 'https://music.163.com/api/playlist/detail?id=3778678'
         try:
-            response = self.session.get(url, timeout=10)
-            result = response.json()
+            result = self.endpoint_request('playlist_detail_v6', {'id': 3778678})
+            if result.get('code') == 200:
+                playlist = result.get('playlist', {})
+                track_ids = [
+                    item.get('id') for item in playlist.get('trackIds', [])
+                    if item.get('id')
+                ][:20]
+                songs = self.get_song_detail(track_ids)
+                if songs:
+                    return songs
+
+            result = self.endpoint_request('hot_playlist_legacy')
             if result.get('code') == 200:
                 playlist = result.get('result', {})
                 return playlist.get('tracks', [])[:10]
@@ -189,7 +250,10 @@ class NeteaseMusicClient:
         else:
             ids = str(song_ids)
         
-        result = self.weapi_request('/v3/song/detail', {
+        if not ids:
+            return []
+
+        result = self.endpoint_request('song_detail', {
             'c': json.dumps([{'id': int(id)} for id in ids.split(',')]),
             'ids': ids
         })
@@ -198,13 +262,18 @@ class NeteaseMusicClient:
             return result.get('songs', [])
         return []
     
+    def get_song_url_items(self, song_ids):
+        """优先调用新版 URL 接口，失败时回退旧版。"""
+        ids = song_ids if isinstance(song_ids, list) else [song_ids]
+        result = self.endpoint_request('song_url_v1', {'ids': ids})
+        data = result.get('data', []) if result.get('code') == 200 else []
+        if isinstance(data, list) and any(item.get('url') for item in data if isinstance(item, dict)):
+            return result
+        return self.endpoint_request('song_url_legacy', {'ids': ids})
+
     def get_song_url(self, song_id):
         """获取歌曲播放链接"""
-        result = self.weapi_request('/song/enhance/player/url', {
-            'ids': [song_id],
-            'br': 320000
-        })
-        
+        result = self.get_song_url_items([song_id])
         if result.get('code') == 200:
             data = result.get('data', [])
             if data:
@@ -214,11 +283,10 @@ class NeteaseMusicClient:
     def save_cookies(self):
         """保存登录状态"""
         os.makedirs(os.path.dirname(self.cookies_file) or '.', exist_ok=True)
-        # 处理重复的cookie，只保留第一个
+        # 处理重复的 cookie，以后出现的域名化 Cookie 为准。
         cookies_dict = {}
         for cookie in self.session.cookies:
-            if cookie.name not in cookies_dict:
-                cookies_dict[cookie.name] = cookie.value
+            cookies_dict[cookie.name] = cookie.value
         with open(self.cookies_file, 'w') as f:
             json.dump(cookies_dict, f)
         print("💾 登录状态已保存")

@@ -44,7 +44,9 @@ var dom = {
     sendCaptchaBtn: document.getElementById('sendCaptchaBtn'),
     loginBtn: document.getElementById('loginBtn'),
     loginMessage: document.getElementById('loginMessage'),
+    systemMessage: document.getElementById('systemMessage'),
     refreshBtn: document.getElementById('refreshBtn'),
+    updateEndpointsBtn: document.getElementById('updateEndpointsBtn'),
     loadingIndicator: document.getElementById('loadingIndicator'),
     songList: document.getElementById('songList'),
     
@@ -85,6 +87,13 @@ function showMessage(msg, isError) {
     if (!dom.loginMessage) return;
     dom.loginMessage.textContent = msg;
     dom.loginMessage.style.color = isError ? '#ff4d4f' : '#4caf50';
+}
+
+function showSystemMessage(msg, isError) {
+    if (!dom.systemMessage) return;
+    dom.systemMessage.textContent = msg;
+    dom.systemMessage.className = isError ? 'system-message error' : 'system-message success';
+    dom.systemMessage.style.display = 'block';
 }
 
 // 自动定位到登录面板
@@ -505,6 +514,25 @@ dom.audioPlayer.onended = function() {
 };
 
 dom.refreshBtn.onclick = function() { loadSongs(false); };
+
+if (dom.updateEndpointsBtn) {
+    dom.updateEndpointsBtn.onclick = function() {
+        dom.updateEndpointsBtn.disabled = true;
+        showSystemMessage('正在更新接口配置...', false);
+        ajax('POST', '/api/admin/update_endpoints', {}, function(res) {
+            dom.updateEndpointsBtn.disabled = false;
+            if (res.code === 200) {
+                showSystemMessage(res.msg || '接口配置已更新', false);
+                loadSongs(false);
+            } else {
+                showSystemMessage(res.msg || '接口配置更新失败', true);
+            }
+        }, function() {
+            dom.updateEndpointsBtn.disabled = false;
+            showSystemMessage('接口配置更新失败，请检查网络', true);
+        });
+    };
+}
 
 // 初始化检查
 window.onload = function() {
