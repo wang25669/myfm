@@ -1,6 +1,7 @@
 import copy
 import json
 import os
+import re
 import tempfile
 import threading
 from datetime import datetime, timezone
@@ -64,9 +65,21 @@ DEFAULT_ENDPOINT_CONFIG = {
 
 REQUIRED_ENDPOINTS = set(DEFAULT_ENDPOINT_CONFIG["endpoints"].keys())
 ALLOWED_UPDATE_HOSTS = {"raw.githubusercontent.com"}
-DEFAULT_UPDATE_URL = (
-    "https://raw.githubusercontent.com/wang25669/myfm/main/myfm/api_endpoints.json"
+API_ENHANCED_MODULE_BASE = (
+    "https://raw.githubusercontent.com/NeteaseCloudMusicApiEnhanced/api-enhanced/main/module/"
 )
+DEFAULT_UPDATE_URL = API_ENHANCED_MODULE_BASE
+
+API_ENHANCED_MODULES = {
+    "captcha_sent": "captcha_sent.js",
+    "login_cellphone": "login_cellphone.js",
+    "daily_recommend": "recommend_songs.js",
+    "personal_fm": "personal_fm.js",
+    "song_detail": "song_detail.js",
+    "song_url_v1": "song_url_v1.js",
+    "song_url_legacy": "song_url.js",
+    "playlist_detail_v6": "playlist_detail.js",
+}
 
 
 def utc_now_text():
@@ -131,9 +144,10 @@ class EndpointConfigManager:
     def refresh(self):
         try:
             self.ensure_allowed_update_url(self.update_url)
-            response = requests.get(self.update_url, timeout=10)
-            response.raise_for_status()
-            candidate = response.json()
+            if self.update_url.endswith(".json"):
+                candidate = self.fetch_json_config(self.update_url)
+            else:
+                candidate = self.build_config_from_api_enhanced(self.update_url)
             self.validate(candidate)
             self.write_atomic(candidate)
             self.apply_config(candidate, source=self.update_url)
@@ -147,6 +161,38 @@ class EndpointConfigManager:
                     "source": self.update_url,
                 }
             return False, str(e)
+
+    def fetch_json_config(self, url):
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        return response.json()
+
+    def build_config_from_api_enhanced(self, module_base_url):
+        candidate = copy.deepcopy(DEFAULT_ENDPOINT_CONFIG)
+        candidate["updated_at"] = utc_now_text()
+        candidate["source"] = "api-enhanced"
+
+        for endpoint_name, module_file in API_ENHANCED_MODULES.items():
+            module_url = module_base_url.rstrip("/") + "/" + module_file
+            self.ensure_allowed_update_url(module_url)
+            response = requests.get(module_url, timeout=10)
+            response.raise_for_status()
+            module_text = response.text
+            api_path = self.extract_module_url(endpoint_name, module_text)
+            candidate["endpoints"][endpoint_name]["endpoint"] = self.to_weapi_endpoint(api_path)
+
+        return candidate
+
+    def extract_module_url(self, endpoint_name, module_text):
+        match = re.search(r"url\s*:\s*['\"]([^'\"]+)['\"]", module_text)
+        if not match:
+            raise ValueError("api-enhanced module has no url: %s" % endpoint_name)
+        return match.group(1)
+
+    def to_weapi_endpoint(self, api_path):
+        if not api_path.startswith("/api/"):
+            raise ValueError("api-enhanced url must start with /api/: %s" % api_path)
+        return api_path[len("/api"):]
 
     def write_atomic(self, candidate):
         directory = os.path.dirname(self.config_path) or "."
