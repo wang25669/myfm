@@ -458,7 +458,12 @@ function updatePlayBtn() {
 // 切换到相邻的歌曲 (direction: 1 下一首, -1 上一首)
 function skipSong(direction) {
     var items = dom.songList.getElementsByClassName('song-item');
-    if (items.length === 0) return;
+    if (items.length === 0) {
+        if (state.currentMode === 'fm') {
+            loadSongs(true);
+        }
+        return;
+    }
     
     var currentIndex = -1;
     for (var i = 0; i < items.length; i++) {

@@ -247,43 +247,55 @@ def get_personal_fm():
         return jsonify({'code': 401, 'msg': '未登录或登录已过期'})
         
     try:
-        # 网易云私人FM接口
-        result = client.endpoint_request('personal_fm')
-        if result.get('code') == 200:
-            songs = result.get('data', [])
+        playable_songs = []
+        last_result = None
+        
+        # 最多尝试获取 3 次，直到有可播放的歌曲
+        for attempt in range(3):
+            result = client.endpoint_request('personal_fm')
+            last_result = result
+            if result.get('code') == 200:
+                songs = result.get('data', [])
+                
+                # 复用过滤不可播放歌曲的逻辑
+                song_ids = [song.get('id') for song in songs if song.get('id')]
+                valid_song_ids = set(song_ids)
+                if song_ids:
+                    try:
+                        url_result = client.get_song_url_items(song_ids)
+                        if url_result.get('code') == 200:
+                            valid_song_ids = {
+                                item.get('id')
+                                for item in url_result.get('data', [])
+                                if is_full_playable_item(item)
+                            }
+                    except Exception:
+                        pass
+                
+                playable_songs = [s for s in songs if s.get('id') in valid_song_ids]
+                if playable_songs:
+                    break
             
-            # 复用过滤不可播放歌曲的逻辑
-            song_ids = [song.get('id') for song in songs if song.get('id')]
-            valid_song_ids = set(song_ids)
-            if song_ids:
-                try:
-                    url_result = client.get_song_url_items(song_ids)
-                    if url_result.get('code') == 200:
-                        valid_song_ids = {
-                            item.get('id')
-                            for item in url_result.get('data', [])
-                            if is_full_playable_item(item)
-                        }
-                except Exception:
-                    pass
+        if not playable_songs:
+            # 如果所有的尝试都因为非 200 而失败，返回最后一次的失败消息
+            if last_result and last_result.get('code') != 200:
+                return jsonify({'code': 500, 'msg': last_result.get('message') or last_result.get('msg') or '获取私人FM失败'})
+            # 如果请求都是 200，但过滤后没有任何可播放歌曲，则返回空列表
+            return jsonify({'code': 200, 'data': []})
             
-            playable_songs = [s for s in songs if s.get('id') in valid_song_ids]
-            
-            simplified_songs = []
-            for s in playable_songs:
-                artists = s.get('artists', [])
-                artist_names = ' / '.join([a.get('name', '未知') for a in artists])
-                simplified_songs.append({
-                    'id': s.get('id'),
-                    'name': s.get('name', '未知'),
-                    'artist': artist_names,
-                    'album': s.get('album', {}).get('name', ''),
-                    'reason': '私人FM',
-                    'picUrl': s.get('album', {}).get('picUrl', '')
-                })
-            return jsonify({'code': 200, 'data': simplified_songs})
-        else:
-            return jsonify({'code': 500, 'msg': '获取私人FM失败'})
+        simplified_songs = []
+        for s in playable_songs:
+            artists = s.get('artists', [])
+            artist_names = ' / '.join([a.get('name', '未知') for a in artists])
+            simplified_songs.append({
+                'id': s.get('id'),
+                'name': s.get('name', '未知'),
+                'artist': artist_names,
+                'album': s.get('album', {}).get('name', ''),
+                'reason': '私人FM',
+                'picUrl': s.get('album', {}).get('picUrl', '')
+            })
+        return jsonify({'code': 200, 'data': simplified_songs})
     except Exception as e:
         return jsonify({'code': 500, 'msg': str(e)})
 
