@@ -268,8 +268,12 @@ dom.toggleLoginBtn.onclick = function() {
 };
 
 // 加载歌曲数据
-function loadSongs(autoPlayFirst) {
-    dom.songList.innerHTML = '';
+function loadSongs(autoPlayFirst, append, retryCount) {
+    append = !!append;
+    retryCount = retryCount || 0;
+    if (!append) {
+        dom.songList.innerHTML = '';
+    }
     dom.loadingIndicator.style.display = 'block';
     
     var url = '/api/hot_songs';
@@ -280,10 +284,17 @@ function loadSongs(autoPlayFirst) {
         dom.loadingIndicator.style.display = 'none';
         
         if (res.code === 200 && res.data && res.data.length > 0) {
-            renderSongs(res.data);
+            renderSongs(res.data, append);
             if (autoPlayFirst) {
                 var items = dom.songList.getElementsByClassName('song-item');
-                if (items.length > 0) playSongItem(items[0], items);
+                if (items.length > 0) {
+                    if (append) {
+                        var startIndex = items.length - res.data.length;
+                        playSongItem(items[startIndex], items);
+                    } else {
+                        playSongItem(items[0], items);
+                    }
+                }
             }
         } else if (res.code === 401) {
             state.isLoggedIn = false;
@@ -294,16 +305,38 @@ function loadSongs(autoPlayFirst) {
                 focusLogin();
             }
         } else {
-            dom.songList.innerHTML = '<li style="text-align:center;padding:20px;color:#888;">' + (res.msg || '暂无可用歌曲') + '</li>';
+            if (append) {
+                if (retryCount < 3) {
+                    showSystemMessage('获取下一首失败，正在后台自动重试 (' + (retryCount + 1) + '/3)...', true);
+                    setTimeout(function() {
+                        loadSongs(autoPlayFirst, append, retryCount + 1);
+                    }, 2000);
+                } else {
+                    showSystemMessage(res.msg || '暂无更多可用歌曲，请稍后再试', true);
+                }
+            } else {
+                dom.songList.innerHTML = '<li style="text-align:center;padding:20px;color:#888;">' + (res.msg || '暂无可用歌曲') + '</li>';
+            }
         }
     }, function() {
         dom.loadingIndicator.style.display = 'none';
-        dom.songList.innerHTML = '<li style="text-align:center;padding:20px;color:#888;">网络错误，请点击刷新重试</li>';
+        if (append) {
+            if (retryCount < 3) {
+                showSystemMessage('网络异常，正在后台自动重试 (' + (retryCount + 1) + '/3)...', true);
+                setTimeout(function() {
+                    loadSongs(autoPlayFirst, append, retryCount + 1);
+                }, 2000);
+            } else {
+                showSystemMessage('网络异常，获取歌曲失败', true);
+            }
+        } else {
+            dom.songList.innerHTML = '<li style="text-align:center;padding:20px;color:#888;">网络错误，请点击刷新重试</li>';
+        }
     });
 }
 
 // 渲染歌曲列表
-function renderSongs(songs) {
+function renderSongs(songs, append) {
     var html = '';
     for (var i = 0; i < songs.length; i++) {
         var song = songs[i];
@@ -327,7 +360,11 @@ function renderSongs(songs) {
         html += '</div></li>';
     }
     
-    dom.songList.innerHTML = html;
+    if (append) {
+        dom.songList.innerHTML += html;
+    } else {
+        dom.songList.innerHTML = html;
+    }
     
     // 绑定点击事件
     var items = dom.songList.getElementsByClassName('song-item');
@@ -460,7 +497,7 @@ function skipSong(direction) {
     var items = dom.songList.getElementsByClassName('song-item');
     if (items.length === 0) {
         if (state.currentMode === 'fm') {
-            loadSongs(true);
+            loadSongs(true, false);
         }
         return;
     }
@@ -479,7 +516,7 @@ function skipSong(direction) {
         if (nextIndex >= items.length) {
             if (state.currentMode === 'fm') {
                 // FM 模式下，播放完自动拉取下一批新歌并播放第一首
-                loadSongs(true);
+                loadSongs(true, true);
                 return;
             } else {
                 // 日推模式，循环回第一首
