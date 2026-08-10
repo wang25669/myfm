@@ -184,11 +184,8 @@ class EndpointConfigManager:
         return candidate
 
     def extract_module_url(self, endpoint_name, module_text):
-        # 新格式：request(`/api/xxx`, ...)
+        # api-enhanced 模块统一写法：request(`/api/xxx`, ...)
         match = re.search(r"request\s*\(\s*`([^`]+)`", module_text)
-        if not match:
-            # 旧格式：url: '/api/xxx'
-            match = re.search(r"url\s*:\s*['\"]([^'\"]+)['\"]", module_text)
         if not match:
             raise ValueError("api-enhanced module has no url: %s" % endpoint_name)
         return match.group(1)
