@@ -146,10 +146,10 @@ def get_song_url():
     except:
         pass
         
-    # 构建安全的文件名：歌手 - 歌名 (ID).mp3
+    # 构建安全的文件名：歌手-歌名-ID.mp3
     safe_name = sanitize_filename(name)
     safe_artist = sanitize_filename(artist)
-    filename = f"{safe_artist} - {safe_name} ({song_id}).mp3"
+    filename = f"{safe_artist}-{safe_name}-{song_id}.mp3"
         
     # 1. 检查本地是否已经有这首歌的缓存
     local_path = os.path.join(SONGS_DIR, filename)
